@@ -62,7 +62,9 @@ def generar_final():
         def procesar_nombre(patron, datos, i):
             resultado = patron
             for k, v in datos.items():
-                resultado = resultado.replace(f"{{{{{k}}}}}", str(v))
+            # Esto busca la llave sin importar si es Mayúscula o Minúscula
+                pattern = re.compile(re.escape(f"{{{{{k}}}}}"), re.IGNORECASE)
+                resultado = pattern.sub(str(v), resultado)
             if resultado == patron and len(datos_lote) > 1:
                 resultado = f"{resultado}_{i+1}"
             return limpiar_nombre(resultado)
