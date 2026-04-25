@@ -7,10 +7,11 @@ from docxtpl import DocxTemplate
 
 app = Flask(__name__)
 
-# Configuración de ruta absoluta para Render
+# Configuración de ruta absoluta
 basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'uploads')
 
+# Crear carpeta si no existe
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
@@ -38,14 +39,11 @@ def analizar_plantilla():
         else:
             return "Error: No se seleccionó ninguna plantilla", 400
 
-        # Intentar abrir el Word
         doc = DocxTemplate(path)
         campos = doc.get_undeclared_template_variables()
         return render_template('rellenar.html', campos=campos, nombre_archivo=nombre_archivo)
-    
     except Exception as e:
-        # Esto nos dirá el error real en la pantalla
-        return f"Error al leer el Word: {str(e)}. Asegúrate de que el archivo no tenga errores de sintaxis como {{{{ campo } (falta una llave).", 500
+        return f"Error al abrir plantilla: {str(e)}", 500
 
 @app.route('/generar_final', methods=['POST'])
 def generar_final():
@@ -55,7 +53,7 @@ def generar_final():
         datos_raw = request.form.get('datos_totales')
         
         if not datos_raw:
-            return "Error: No se recibieron datos", 400
+            return "Error: No hay datos", 400
             
         datos_lote = json.loads(datos_raw)
 
@@ -66,7 +64,7 @@ def generar_final():
             doc.save(output)
             output.seek(0)
             return send_file(output, as_attachment=True, 
-                             download_name=f"generado_{nombre_archivo}",
+                             download_name=f"final_{nombre_archivo}",
                              mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
         else:
             zip_buffer = io.BytesIO()
@@ -79,10 +77,10 @@ def generar_final():
                     zf.writestr(f"documento_{i+1}.docx", doc_io.getvalue())
             zip_buffer.seek(0)
             return send_file(zip_buffer, as_attachment=True, 
-                             download_name="lote_documentos.zip", 
+                             download_name="documentos.zip", 
                              mimetype='application/zip')
     except Exception as e:
-        return f"Error al generar: {str(e)}", 500
+        return f"Error en generación: {str(e)}", 500
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
