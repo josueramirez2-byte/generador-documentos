@@ -7,26 +7,38 @@
 </head>
 <body class="bg-light p-5">
     <div class="container card shadow p-4" style="max-width: 800px;">
-        <div id="status" class="alert alert-secondary text-center">Registros listos para generar: <b id="cuenta">0</b></div>
+        <div id="status" class="alert alert-secondary text-center">Registros listos: <b id="cuenta">0</b></div>
         
-        <h3>Datos para: {{ nombre_archivo }}</h3>
+        <h3>Plantilla: {{ nombre_archivo }}</h3>
+        
+        <div class="mb-4 p-3 border rounded bg-white">
+            <label class="form-label text-primary"><b>Estructura del nombre de archivo:</b></label>
+            <input type="text" id="patron_nombre" class="form-control" 
+                   value="OFICIO_{{ '{{' }}id{{ '}}' }}" 
+                   placeholder="Ejemplo: Contrato_{{ '{{' }}nombre{{ '}}' }}">
+            <small class="text-muted">Usa {{ '{{' }}campo{{ '}}' }} para que el nombre sea dinámico.</small>
+        </div>
+
+        <hr>
+
         <form id="form_inputs" class="row">
             {% for campo in campos %}
             <div class="col-md-6 mb-3">
                 <label class="text-capitalize">{{ campo | replace('_', ' ') }}</label>
-                <input type="text" id="val_{{ campo }}" class="form-control" required>
+                <input type="text" id="val_{{ campo }}" class="form-control">
             </div>
             {% endfor %}
         </form>
 
         <div class="d-flex gap-2 mt-4">
             <button type="button" onclick="add()" class="btn btn-outline-primary w-50">➕ Guardar y añadir otro</button>
-            <button type="button" onclick="finish()" class="btn btn-success w-50">🚀 Generar Documento(s)</button>
+            <button type="button" onclick="finish()" class="btn btn-success w-50">🚀 Generar Todo</button>
         </div>
 
         <form action="/generar_final" method="post" id="form_hidden">
             <input type="hidden" name="nombre_archivo" value="{{ nombre_archivo }}">
             <input type="hidden" name="datos_totales" id="payload">
+            <input type="hidden" name="nombre_dinamico" id="nombre_envio">
         </form>
     </div>
 
@@ -38,24 +50,33 @@
             let entry = {};
             fields.forEach(f => {
                 entry[f] = document.getElementById('val_' + f).value;
-                document.getElementById('val_' + f).value = ''; // Limpiar
+                document.getElementById('val_' + f).value = ''; 
             });
             dataStore.push(entry);
             document.getElementById('cuenta').innerText = dataStore.length;
+            alert("Añadido. Rellena el siguiente o genera el total.");
         }
 
         function finish() {
-            // Si el usuario no pulsó "Añadir otro" pero llenó el formulario, lo tomamos automáticamente
-            let hasData = fields.some(f => document.getElementById('val_' + f).value !== '');
-            if (hasData) {
-                let entry = {};
-                fields.forEach(f => entry[f] = document.getElementById('val_' + f).value);
-                dataStore.push(entry);
+            let currentData = {};
+            let hasAnyData = false;
+            fields.forEach(f => {
+                let val = document.getElementById('val_' + f).value;
+                if(val !== "") hasAnyData = true;
+                currentData[f] = val;
+            });
+
+            if (hasAnyData) {
+                dataStore.push(currentData);
             }
 
-            if (dataStore.length === 0) return alert("Ingresa al menos un dato");
-            
+            if (dataStore.length === 0) {
+                alert("No hay datos para generar.");
+                return;
+            }
+
             document.getElementById('payload').value = JSON.stringify(dataStore);
+            document.getElementById('nombre_envio').value = document.getElementById('patron_nombre').value;
             document.getElementById('form_hidden').submit();
         }
     </script>
